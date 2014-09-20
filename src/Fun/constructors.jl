@@ -83,13 +83,17 @@ function zerocfsFun(f::Function,d::DomainSpace)
         return veczerocfsFun(f,domain(d))
     end
 
-    tol = 200*eps()
-
+    #tol = 200*eps()
+    
     for logn = 4:20
         cf = Fun(f, d, 2^logn + 1)
-        
-        if maximum(abs(cf.coefficients[end-8:end])) < tol*maximum(abs(cf.coefficients[1:8]))
-            return chop!(cf,10eps()*maximum(abs(cf.coefficients)))
+        # Estimate condition number of function: 
+	dy = diff(values(cf))
+        dx = diff(points(cf))
+        gradEstimate = maxabs(dy./dx)
+        condEstimate = min( 10eps()/maxabs([values(cf),1])*gradEstimate, 1e-4 )
+	if maxabs(cf.coefficients[end-8:end]) < condEstimate*maxabs(cf.coefficients[1:8])
+            return chop!(cf,condEstimate*maxabs(cf.coefficients))
         end
     end
     
