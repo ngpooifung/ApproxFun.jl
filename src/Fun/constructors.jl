@@ -92,6 +92,7 @@ function zerocfsFun(f::Function,d::DomainSpace)
         dx = diff(points(cf))
         gradEstimate = maxabs(dy./dx)
         condEstimate = min( 10eps()/maxabs([values(cf),1])*gradEstimate, 1e-4 )
+	condEstimate = max(200eps(),condEstimate)
 	if maxabs(cf.coefficients[end-8:end]) < condEstimate*maxabs(cf.coefficients[1:8])
             return chop!(cf,condEstimate*maxabs(cf.coefficients))
         end

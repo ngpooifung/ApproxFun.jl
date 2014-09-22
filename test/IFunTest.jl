@@ -19,11 +19,11 @@ eocf = Fun(x->cos(x)./exp(x))
 
 r=2.*rand(100) .- 1
 
-@test maximum(abs(ef[r]-exp(r)))<100eps()
+@test maximum(abs(ef[r]-exp(r)))<200eps()
 @test maximum(abs(ecf[r]-cos(r).*exp(r)))<100eps()
 
 
-@test norm((ecf-cf.*ef).coefficients)<100eps()
+@test norm((ecf-cf.*ef).coefficients)<200eps()
 
 
 
@@ -65,12 +65,11 @@ x=1.5
 @test_approx_eq ef[x] exp(x)
 
 
-
-@test maximum(abs(ef[r]-exp(r)))<100eps()
+@test maximum(abs(ef[r]-exp(r)))<300eps()
 @test maximum(abs(ecf[r]-cos(r).*exp(r)))<100eps()
 
 
-@test norm((ecf-cf.*ef).coefficients)<100eps()
+@test norm((ecf-cf.*ef).coefficients)<300eps()
 
 
 @test maximum(abs((eocf-cf./ef).coefficients))<1000eps()

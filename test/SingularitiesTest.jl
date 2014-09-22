@@ -23,4 +23,5 @@ f=Fun(x->exp(-x.^2),Line(0.,0.,-.5,-.5),400)
 @test_approx_eq sum(f) sqrt(π)
 
 f=Fun(x->exp(x)/sqrt(1-x.^2),JacobiWeightSpace(-.5,-.5))
+println(f[.1] - (exp(.1)/sqrt(1-.1^2)))
 @test_approx_eq f[.1] (x->exp(x)/sqrt(1-x.^2))(.1)
