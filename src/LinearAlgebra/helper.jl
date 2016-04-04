@@ -24,6 +24,8 @@ real{T<:Real}(::Type{T})=T
 real{T<:Real}(::Type{Complex{T}})=T
 real{T<:Real,n}(::Type{Array{T,n}})=Array{T,n}
 real{T<:Complex,n}(::Type{Array{T,n}})=Array{real(T),n}
+real{T<:Real,n}(::Type{Vec{n,T}})=Vec{n,T}
+real{T<:Complex,n}(::Type{Vec{n,T}})=Vec{n,real(T)}
 
 eps(x...)=Base.eps(x...)
 eps{T<:Real}(::Type{Complex{T}})=eps(real(T))

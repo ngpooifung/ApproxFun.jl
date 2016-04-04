@@ -2,8 +2,10 @@ immutable PiecewiseInterval{T} <: UnivariateDomain{T}
     points::Vector{T}
     PiecewiseInterval(d::Vector{T})=new(d)
 end
-PiecewiseInterval{T<:Number}(d::Vector{T})=PiecewiseInterval{T}(d)
-PiecewiseInterval(d::Number...)=PiecewiseInterval([d...])
+PiecewiseInterval(d::Vector)=PiecewiseInterval{eltype(d)}(d)
+PiecewiseInterval{T<:Number}(d::AbstractVector{Tuple{T,T}})=PiecewiseInterval(map(Vec,d))
+PiecewiseInterval(d...)=PiecewiseInterval([d...])
+
 
 function PiecewiseInterval{IT<:Interval}(pcsin::AbstractVector{IT})
     pcs=collect(pcsin)
