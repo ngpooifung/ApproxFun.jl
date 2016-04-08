@@ -6,6 +6,12 @@ export ldiffbc,rdiffbc,diffbcs
 export domainspace,rangespace
 
 
+@enum Banded BandedBelow AlmostBanded
+
+typealias BandedOperator{T} Operator{Banded,T}
+typealias BandedBelowOperator{T} Operator{BandedBelow,T}
+
+
 abstract Operator{T} #T is the entry type, Float64 or Complex{Float64}
 abstract Functional{T} <: Operator{T}
 abstract InfiniteOperator{T} <: Operator{T}   #Infinite Operators have + range
