@@ -182,7 +182,19 @@ defaultgetindex(A::BandedOperator,k::Integer,::Colon)=FiniteFunctional(vec(A[k,1
 defaultgetindex(A::BandedOperator,kr::Range,::Colon)=slice(A,kr,:)
 defaultgetindex(A::BandedOperator,::Colon,jr::Range)=slice(A,:,jr)
 defaultgetindex(A::BandedOperator,::Colon,::Colon)=A
-Base.getindex(B::Operator,k,j)=defaultgetindex(B,k,j)
+
+
+immutable PlanGetIndex{O,D,I}
+    op::O
+    data::D
+    indexes::I
+end
+
+plan_getindex(B::Operator,k,j)=PlanGetIndex(B,(),(k,j))
+getindex(P::PlanGetIndex,k,j)=defaultgetindex(P.op,k,j)
+
+
+Base.getindex(B::Operator,k,j)=plan_getindex(B,k,j)[k,j]
 
 
 
