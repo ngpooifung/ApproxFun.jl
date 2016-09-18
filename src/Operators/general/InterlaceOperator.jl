@@ -219,53 +219,6 @@ function colstop(M::InterlaceOperator,j::Integer)
     end
 end
 
-#
-# function colstop{T}(M::InterlaceOperator{T,2},j::Integer)
-#     l = M.bandinds[1]
-#
-#     if isinf(l)
-#         (J,ξ) = M.domaininterlacer[j]
-#         ret = j
-#
-#         for K=1:size(M.ops,1)
-#             cs=colstop(M.ops[K,J],ξ)
-#
-#             for k=j:size(M,1)
-#                 (KK,κ)=M.rangeinterlacer[k]
-#                 if K == KK && κ ≥ cs
-#                     ret = max(ret,k)
-#                     break
-#                 end
-#             end
-#         end
-#         return ret
-#     else
-#         return  min(size(M,1),j-l)
-#     end
-# end
-
-# function colstop{T}(M::InterlaceOperator{T,1},j::Integer)
-#     l = M.bandinds[1]
-#
-#     if isinf(l)
-#         ret = j
-#
-#         for K=1:length(M.ops)
-#             cs=colstop(M.ops[K],j)
-#
-#             for k=j:size(M,1)
-#                 (KK,κ)=M.rangeinterlacer[k]
-#                 if K == KK && κ ≥ cs
-#                     ret = max(ret,k)
-#                     break
-#                 end
-#             end
-#         end
-#         return ret
-#     else
-#         return  min(size(M,1),j-l)
-#     end
-# end
 
 israggedbelow(M::InterlaceOperator) = all(israggedbelow,M.ops)
 
@@ -393,3 +346,11 @@ function choosedomainspace{T}(A::InterlaceOperator{T,1},sp::UnsetSpace)
         union(sps...)
     end
 end
+
+
+
+## vcat overrides
+
+Base.vcat(A::Operator...) = InterlaceOperator(Operator{mapreduce(eltype,promote_type,A)}[A...])
+Base.vcat{T}(A::InterlaceOperator{T,1},B::Operator...) =
+    InterlaceOperator(Operator{promote_type(T,mapreduce(eltype,promote_type,B))}[A.ops...,B...])
