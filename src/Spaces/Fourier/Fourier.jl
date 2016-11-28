@@ -81,23 +81,28 @@ plan_itransform(::Hardy{false},x::Vector) = plan_ifft(x)
 transform(::Hardy{false},vals::Vector,plan) = -alternatesign!(flipdim(plan*vals,1)/length(vals))
 itransform(::Hardy{false},cfs::Vector,plan) = plan*flipdim(alternatesign!(-cfs),1)*length(cfs)
 
-evaluate{D<:Domain}(f::AbstractVector,S::Taylor{D},z) = horner(f,fromcanonical(Circle(),tocanonical(S,z)))
-function evaluate{D<:Circle}(f::AbstractVector,S::Taylor{D},z)
-    z=mappoint(S,𝕌,z)
-    d=domain(S)
-    horner(f,z)
+
+
+
+plan_evaluate{D<:Domain}(f::Fun{Taylor{D}}) = EvaluatePlan(space(f))
+@compat (P::EvaluatePlan{Taylor{D}}){D<:Domain}(cfs,z) = horner(cfs,fromcanonical(Circle(),tocanonical(S,z)))
+@compat function (P::EvaluatePlan{Taylor{D}}){D<:Circle}(cfs,z)
+    z=mappoint(space(P),𝕌,z)
+    horner(cfs,z)
 end
 
-function evaluate{D<:Domain}(f::AbstractVector,S::Hardy{false,D},z)
-    z=mappoint(S,𝕌,z)
+@compat function (P::EvaluatePlan{Hardy{false,D}}){D<:Domain}(cfs,z)
+    z=mappoint(space(P),𝕌,z)
     z=1./z
-    z.*horner(f,z)
+    z.*horner(cfs,z)
 end
-function evaluate{D<:Circle}(f::AbstractVector,S::Hardy{false,D},z)
-    z=mappoint(S,𝕌,z)
+
+@compat function (P::EvaluatePlan{Hardy{false,D}}){D<:Circle}(cfs,z)
+    z=mappoint(space(P),𝕌,z)
     z=1./z
-    z.*horner(f,z)
+    z.*horner(cfs,z)
 end
+
 
 
 ##TODO: fast routine

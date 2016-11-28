@@ -1,4 +1,4 @@
-export Fun,evaluate,values,points,extrapolate,setdomain
+export Fun,values,points,extrapolate,setdomain
 export coefficients,ncoefficients,coefficient
 export integrate,differentiate,domain,space,linesum,linenorm
 
@@ -143,20 +143,33 @@ canonicaldomain(f::Fun) = canonicaldomain(domain(f))
 
 ##Evaluation
 
-function evaluate(f::AbstractVector,S::Space,x...)
-    csp=canonicalspace(S)
-    if spacescompatible(csp,S)
-        error("Override evaluate for " * string(typeof(csp)))
-    else
-        evaluate(coefficients(f,S,csp),csp,x...)
-    end
+abstract AbstractEvaluatePlan{S}
+
+space(P::AbstractEvaluatePlan) = P.space  # assume it has a field
+
+immutable EvaluatePlan{S} <: AbstractEvaluatePlan{S}
+    space::S
 end
 
-evaluate(f::Fun,x) = evaluate(f.coefficients,f.space,x)
-evaluate(f::Fun,x,y,z...) = evaluate(f.coefficients,f.space,Vec(x,y,z...))
+immutable ConvertEvaluatePlan{S,CS} <: AbstractEvaluatePlan{S}
+    space::S
+    plan::CS
+end
+
+@compat (P::ConvertEvaluatePlan)(cfs,x...) =
+    P.plan(coefficients(cfs,P.space,space(P.plan)),x...)
 
 
-@compat (f::Fun)(x...) = evaluate(f,x...)
+function plan_evaluate(f::Fun,x...)
+    S=space(f)
+    csp=canonicalspace(S)
+    if spacescompatible(csp,S)
+        error("Override plan_evaluate for " * string(typeof(csp)))
+    end
+    ConvertEvaluatePlan(S,plan_evaluate(Fun(f,csp),x...))
+end
+
+@compat (f::Fun)(x...) = plan_evaluate(f)(f.coefficients,x...)
 
 for op in (:(Base.first),:(Base.last))
     @eval $op{S,T}(f::Fun{S,T}) = f($op(domain(f)))
@@ -168,7 +181,7 @@ end
 
 
 # Default extrapolation is evaluation. Override this function for extrapolation enabled spaces.
-extrapolate(f::AbstractVector,S::Space,x...) = evaluate(f,S,x...)
+extrapolate(f::AbstractVector,S::Space,x...) = Fun(S,f)(x...)
 
 # Do not override these
 extrapolate(f::Fun,x) = extrapolate(f.coefficients,f.space,x)

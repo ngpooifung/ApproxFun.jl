@@ -500,8 +500,8 @@ function transform(sp::TensorSpace,vals,plan...)
     fromtensor(sp,transform!(sp,V))
 end
 
-evaluate(f::AbstractVector,S::AbstractProductSpace,x) = ProductFun(totensor(S,f),S)(x...)
-evaluate(f::AbstractVector,S::AbstractProductSpace,x,y) = ProductFun(totensor(S,f),S)(x,y)
+@compat (f::Fun{S}){S<:AbstractProductSpace}(x) = ProductFun(totensor(S,f),S)(x...)
+@compat (f::Fun{S}){S<:AbstractProductSpace}(x,y) = ProductFun(totensor(S,f),S)(x,y)
 
 
 

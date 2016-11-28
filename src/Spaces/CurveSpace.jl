@@ -7,12 +7,6 @@ Space{S<:Laurent}(d::PeriodicCurve{S})=Laurent(d)
 #TODO: Make type stable
 Base.convert(::Type{Curve},f::Fun)=isa(domain(f),IntervalDomain)?IntervalCurve(f):PeriodicCurve(f)
 
-# function evaluate{C<:Curve,TT}(f::AbstractVector,S::Space{TT,C},x::Number)
-#     rts=roots(domain(S).curve-x)
-#     @assert length(rts)==1
-#     evaluate(Fun(f,setdomain(S,canonicaldomain(S))),first(rts))
-# end
-
 
 
 identity_fun{C<:Curve,TT}(d::Space{TT,C})=Fun(setdomain(space(domain(d).curve),domain(d)),
@@ -50,7 +44,7 @@ setdomain{O}(S::Bernstein{O},d::Domain)=Bernstein{O}(d)
 
 identity_fun{order,T}(B::Bernstein{order,T})=Fun(B,collect(-one(T):2one(T)/order:one(T)))
 
-evaluate(f::AbstractVector,S::Bernstein,z) = decasteljau(f,S,tocanonical(S,z))
+@compat (f::Fun{S}){S<:Bernstein}(z) = decasteljau(f.coefficients,S,tocanonical(S,z))
 
 # de Casteljau's numerically stable evaluation of Bernstein polynomials
 

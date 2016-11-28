@@ -13,37 +13,9 @@ rangespace{U<:PolynomialSpace,V<:PolynomialSpace}(M::ConcreteMultiplication{U,V}
 
 # All polynomials contain constant
 union_rule(A::ConstantSpace,B::PolynomialSpace) = B
-Base.promote_rule{T<:Number,S<:PolynomialSpace,V}(::Type{Fun{S,V}},::Type{T}) = Fun{S,promote_type(V,T)}
+Base.promote_rule{T<:Number,S<:PolynomialSpace,V}(::Type{Fun{S,V}},::Type{T}) =
+    Fun{S,promote_type(V,T)}
 Base.promote_rule{T<:Number,S<:PolynomialSpace}(::Type{Fun{S}},::Type{T}) = Fun{S,T}
-
-## Evaluation
-
-function evaluate(f::AbstractVector,S::PolynomialSpace,x)
-    if x in domain(S)
-        clenshaw(S,f,tocanonical(S,x))
-    else
-        zero(eltype(f))
-    end
-end
-
-evaluate(f::AbstractVector,S::PolynomialSpace,x::AbstractArray) = map(y->evaluate(f,S,y),x)
-
-# we need the ... for multi-dimensional
-evaluate(f::AbstractVector,S::PolynomialSpace,x,y,z...) =
-    evaluate(f,S,Vec(x,y,z...))
-
-function evaluate(f::AbstractVector,S::PolynomialSpace,x::Fun)
-    if issubset(Interval(minimum(x),maximum(x)),domain(S))
-        clenshaw(S,f,tocanonical(S,x))
-    else
-        error("Implement splitatpoints for evaluate ")
-    end
-end
-
-## Extrapolation
-
-extrapolate(f::AbstractVector,S::PolynomialSpace,x) = clenshaw(S,f,tocanonical(S,x))
-extrapolate(f::AbstractVector,S::PolynomialSpace,x::AbstractArray) = map(y->extrapolate(f,S,y),x)
 
 ######
 # Recurrence encodes the recurrence coefficients
@@ -126,7 +98,8 @@ end
 #####
 
 
-getindex{PS<:PolynomialSpace,T,C<:PolynomialSpace}(M::ConcreteMultiplication{C,PS,T},k::Integer,j::Integer) = M[k:k,j:j][1,1]
+getindex{PS<:PolynomialSpace,T,C<:PolynomialSpace}(M::ConcreteMultiplication{C,PS,T},k::Integer,j::Integer) =
+    M[k:k,j:j][1,1]
 
 
 # Fast C = α.*A.*B .+ β.*C
@@ -256,13 +229,52 @@ union_rule{D}(a::PolynomialSpace{D},b::PolynomialSpace{D}) =
     domainscompatible(a,b)?(a<b?a:b):NoSpace()   # the union of two polys is always a poly
 
 
+## Evaluation
+
+immutable PolynomialEvaluatePlan{S,CL} <: AbstractEvaluatePlan{S}
+    space::S
+    plan::CL
+end
+
+plan_evaluate{PS<:PolynomialSpace}(f::Fun{PS},x::AbstractArray) = PolynomialSpace(space(f),
+    ClenshawPlan(promote_type(eltype(f),eltype(x)),sp,ncoefficients(f),length(x)))
+
+function evaluate(f::AbstractVector,S::PolynomialSpace,x)
+    if x in domain(S)
+        clenshaw(S,f,tocanonical(S,x))
+    else
+        zero(eltype(f))
+    end
+end
+
+evaluate(f::AbstractVector,S::PolynomialSpace,x::AbstractArray) = map(y->evaluate(f,S,y),x)
+
+# we need the ... for multi-dimensional
+evaluate(f::AbstractVector,S::PolynomialSpace,x,y,z...) =
+    evaluate(f,S,Vec(x,y,z...))
+
+function evaluate(f::AbstractVector,S::PolynomialSpace,x::Fun)
+    if issubset(Interval(minimum(x),maximum(x)),domain(S))
+        clenshaw(S,f,tocanonical(S,x))
+    else
+        error("Implement splitatpoints for evaluate ")
+    end
+end
+
+## Extrapolation
+
+extrapolate(f::AbstractVector,S::PolynomialSpace,x) = clenshaw(S,f,tocanonical(S,x))
+extrapolate(f::AbstractVector,S::PolynomialSpace,x::AbstractArray) = map(y->extrapolate(f,S,y),x)
+
+
 ## General clenshaw
 clenshaw(sp::PolynomialSpace,c::AbstractVector,x::AbstractArray) = clenshaw(c,x,
                                             ClenshawPlan(promote_type(eltype(c),eltype(x)),sp,length(c),length(x)))
 clenshaw(sp::PolynomialSpace,c::AbstractMatrix,x::AbstractArray) = clenshaw(c,x,ClenshawPlan(promote_type(eltype(c),eltype(x)),sp,size(c,1),length(x)))
 clenshaw(sp::PolynomialSpace,c::AbstractMatrix,x) = clenshaw(c,x,ClenshawPlan(promote_type(eltype(c),typeof(x)),sp,size(c,1),size(c,2)))
 
-clenshaw!(sp::PolynomialSpace,c::AbstractVector,x::AbstractVector)=clenshaw!(c,x,ClenshawPlan(promote_type(eltype(c),eltype(x)),sp,length(x)))
+clenshaw!(sp::PolynomialSpace,c::AbstractVector,x::AbstractVector) =
+    clenshaw!(c,x,ClenshawPlan(promote_type(eltype(c),eltype(x)),sp,length(x)))
 
 function clenshaw(sp::PolynomialSpace,c::AbstractVector,x)
     N,T = length(c),promote_type(eltype(c),typeof(x))

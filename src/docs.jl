@@ -212,12 +212,11 @@ itransform(::Space,::Vector)
 
 
 doc"""
-    evaluate(sp::Space,coefficients::Vector,x)
+    plan_evaluate(f::Fun,x...)
 
-Evaluates the expansion at a point `x`.
-If `x` is in the domain, then this should return zero.
+Returns an `EvaluationPlan` for evaluating the expansion at a point `x`.
 """
-evaluate(::Space,::Vector,::)
+plan_evaluate(f::Fun,x...)
 
 
 
