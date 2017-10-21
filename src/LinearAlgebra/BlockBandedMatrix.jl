@@ -1,13 +1,5 @@
-doc"""
-`Block` is used for get index of a block matrix.  For example,
-```julia
-A[Block(1),Block(2)]
-```
-retrieves the 1 x 2 block
-"""
-struct Block <: Real
-    K::Int
-end
+const UnitBlockRange = BlockRange{1,Tuple{UnitRange{Int}}}
+
 
 block(B::Block) = B
 
@@ -44,16 +36,6 @@ for OP in (:(Base.rem),:(Base.div))
         $OP(A::Block,B::Integer) = Block($OP(A.K,B))
     end
 end
-
-
-# broadcasting
-Base.broadcast(::Type{Int},r::UnitRange{Block}) = Int(r.start):Int(r.stop)
-Base.broadcast(::Type{Int},r::StepRange{Block,Block}) = Int(r.start):Int(r.step):Int(r.stop)
-Base.broadcast(::Type{Int},B::Block) = Int(B)
-#
-Base.broadcast(::Type{Block},r::UnitRange{Int}) = Block(r.start):Block(r.stop)
-Base.broadcast(::Type{Block},r::StepRange{Int,Int}) = Block(r.start):Block(r.step):Block(r.stop)
-Base.broadcast(::Type{Block},B::Int) = Block(B)
 
 
 
@@ -108,36 +90,21 @@ end
 
 
 
-# AbstractBlockMatrix`
-abstract type AbstractBlockMatrix{T,BT} <: AbstractMatrix{T} end
+## AbstractBlockBandedMatrix
+
+abstract type AbstractBlockBandedMatrix{T,BT} <: AbstractBlockMatrix{T} end
+
+rowblocklengths(A::AbstractBlockBandedMatrix) = A.rows
+colblocklengths(A::AbstractBlockBandedMatrix) = A.cols
 
 
-rowblocklengths(A::AbstractBlockMatrix) = A.rows
-colblocklengths(A::AbstractBlockMatrix) = A.cols
-
-
-function getindex(A::AbstractBlockMatrix{T,BT},K::Block,J::Block) where {T,BT}
+function getindex(A::AbstractBlockBandedMatrix{T,BT},K::Block,J::Block) where {T,BT}
     if -A.l ≤ J-K ≤ A.u
         BT(view(A,K,J))
     else
         zeroblock(A,K,J)
     end
 end
-getindex(A::AbstractBlockMatrix,K::Block,j) = A[blockrows(A,K),j]
-getindex(A::AbstractBlockMatrix,k,J::Block) = A[k,blockcols(A,J)]
-
-getindex(A::AbstractBlockMatrix,KR::UnitRange{Block},JR::UnitRange{Block}) =
-    Matrix(view(A,KR,JR))
-
-setindex!(A::AbstractBlockMatrix,V,K::Block,J::Block) = (view(A,K,J) .= V)
-setindex!(A::AbstractBlockMatrix,V,K::Block,j) = (view(A,blockrows(A,K),j) .= V)
-setindex!(A::AbstractBlockMatrix,V,k,J::Block) = (view(A,k,blockcols(A,J)) .= V)
-
-
-Base.size(A::AbstractBlockMatrix) = sum(A.rows),sum(A.cols)
-
-blocksize(A::AbstractMatrix,k::Int) = k==1?length(rowblocklengths(A)):length(colblocklengths(A))
-blocksize(A::AbstractMatrix) = blocksize(A,1),blocksize(A,2)
 
 
 function blockmatrix_αA_mul_B_plus_βC!(α,A,x,β,y)
@@ -159,10 +126,10 @@ function blockmatrix_αA_mul_B_plus_βC!(α,A,x,β,y)
     y
 end
 
-αA_mul_B_plus_βC!(α,A::AbstractBlockMatrix,x::AbstractVector,β,y::AbstractVector) =
+αA_mul_B_plus_βC!(α,A::AbstractBlockBandedMatrix,x::AbstractVector,β,y::AbstractVector) =
     blockmatrix_αA_mul_B_plus_βC!(α,A,x,β,y)
 
-Base.A_mul_B!(y::Vector,A::AbstractBlockMatrix,b::Vector) =
+Base.A_mul_B!(y::Vector,A::AbstractBlockBandedMatrix,b::Vector) =
     αA_mul_B_plus_βC!(one(eltype(A)),A,b,zero(eltype(y)),y)
 
 
@@ -179,14 +146,14 @@ function block_axpy!(α,A,Y)
     Y
 end
 
-Base.BLAS.axpy!(α,A::AbstractBlockMatrix,Y::AbstractBlockMatrix) = block_axpy!(α,A,Y)
+Base.BLAS.axpy!(α,A::AbstractBlockBandedMatrix,Y::AbstractBlockBandedMatrix) = block_axpy!(α,A,Y)
 
 
 
 ## Algebra
 
 
-function Base.A_mul_B!(Y::AbstractBlockMatrix,A::AbstractBlockMatrix,B::AbstractBlockMatrix)
+function Base.A_mul_B!(Y::AbstractBlockBandedMatrix,A::AbstractBlockBandedMatrix,B::AbstractBlockBandedMatrix)
     T=eltype(Y)
     BLAS.scal!(length(Y.data),zero(T),Y.data,1)
     o=one(T)
@@ -250,7 +217,7 @@ function blockcols(S::SubArray{T,2,BBM,Tuple{UnitRange{Int},UnitRange{Int}}},J::
     max(1,br[1]):min(length(jr),br[end])
 end
 
-const AllBlockMatrix{T,BBM<:AbstractBlockMatrix,II<:Union{UnitRange{Int},UnitRange{Block}},JJ<:Union{UnitRange{Int},UnitRange{Block}}} =
+const AllBlockMatrix{T,BBM<:AbstractBlockMatrix,II<:Union{UnitRange{Int},UnitBlockRange},JJ<:Union{UnitRange{Int},UnitBlockRange}} =
     Union{AbstractBlockMatrix,SubArray{T,2,BBM,Tuple{II,JJ}}}
 
 function Base.BLAS.axpy!(α,A::AllBlockMatrix,Y::AbstractMatrix)
@@ -274,9 +241,6 @@ Base.BLAS.axpy!(α,A::AllBlockMatrix,Y::AllBlockMatrix) = block_axpy!(α,A,Y)
 
 
 
-## AbstractBlockBandedMatrix
-
-abstract type AbstractBlockBandedMatrix{T,BT} <: AbstractBlockMatrix{T,BT} end
 
 isblockbanded(_) = false
 isblockbanded(::AbstractBlockBandedMatrix) = true
@@ -464,7 +428,7 @@ zeroblock(X::BlockBandedMatrix,K::Block,J::Block) = zeros(eltype(X),X.rows[K.K],
 ## View
 
 const SubBandedBlockSubBlock{T,BBM<:BlockBandedMatrix,II<:Union{Block,SubBlock},JJ<:Union{Block,SubBlock}} = SubArray{T,2,BBM,Tuple{II,JJ},false}
-const SubBandedBlockRange{T,BBM<:BlockBandedMatrix} = SubArray{T,2,BBM,Tuple{UnitRange{Block},UnitRange{Block}},false}
+const SubBandedBlockRange{T,BBM<:BlockBandedMatrix} = SubArray{T,2,BBM,Tuple{UnitBlockRange,UnitBlockRange},false}
 const StridedMatrix2{T,A<:Union{DenseArray,Base.StridedReshapedArray,BlockBandedMatrix},I<:Tuple{Vararg{Union{Base.RangeIndex,Base.AbstractCartesianIndex,Block,SubBlock}}}} = Union{DenseArray{T,2}, SubArray{T,2,A,I}, Base.StridedReshapedArray{T,2}}
 
 
@@ -480,7 +444,7 @@ subblocksize(A::AbstractBlockBandedMatrix,K::SubBlock,J::Block)::Tuple{Int,Int} 
 subblocksize(A::AbstractBlockBandedMatrix,K::SubBlock,J::SubBlock)::Tuple{Int,Int} =
     (length(K.sub),length(J.sub))
 
-subblocksize(A::AbstractBlockBandedMatrix,K::UnitRange{Block},J::UnitRange{Block})::Tuple{Int,Int} =
+subblocksize(A::AbstractBlockBandedMatrix,K::UnitBlockRange,J::UnitBlockRange)::Tuple{Int,Int} =
     (sum(A.rows[Int.(K)]),sum(A.cols[Int.(J)]))
 
 rowblocklengths(A::SubBandedBlockRange) = parent(A).rows[parentindexes(A)[1]]
@@ -782,7 +746,7 @@ end
 
 
 
-Base.view(A::AbstractBlockBandedMatrix,K::Union{Block,SubBlock,UnitRange{Block}},J::Union{Block,SubBlock,UnitRange{Block}}) =
+Base.view(A::AbstractBlockBandedMatrix,K::Union{Block,SubBlock,UnitBlockRange},J::Union{Block,SubBlock,UnitBlockRange}) =
         SubArray(A, (K,J))
 
 
@@ -797,7 +761,7 @@ Base.view(A::SubBandedBlockSubBlock,K::Union{AbstractArray,Real},J::Union{Abstra
 Base.view(A::SubBandedBlockSubBlock,K,J) =
     view(parent(A),parentindexes(A)[1][K],parentindexes(A)[2][J])
 
-Base.view(A::SubBandedBlockRange,K::Union{Block,SubBlock,UnitRange{Block}},J::Union{Block,SubBlock,UnitRange{Block}}) =
+Base.view(A::SubBandedBlockRange,K::Union{Block,SubBlock,UnitBlockRange},J::Union{Block,SubBlock,UnitBlockRange}) =
     view(parent(A),parentindexes(A)[1][Int.(K)],parentindexes(A)[2][Int.(J)])
 
 Base.view(A::SubArray{T,2,BBM,Tuple{UnitRange{Int},UnitRange{Int}}},k::Block,j::Block) where {T,BBM<:AbstractBlockBandedMatrix} =

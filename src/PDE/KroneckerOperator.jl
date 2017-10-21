@@ -393,7 +393,7 @@ const Trivial2DTensorizer = CachedIterator{Tuple{Int64,Int64},
 function convert(::Type{BandedBlockBandedMatrix},
                       S::SubOperator{T,KroneckerOperator{SS,V,DS,RS,
                                      Trivial2DTensorizer,Trivial2DTensorizer,T},
-                                     Tuple{UnitRange{Block},UnitRange{Block}}}) where {SS,V,DS,RS,T}
+                                     Tuple{UnitBlockRange,UnitBlockRange}}) where {SS,V,DS,RS,T}
     KR,JR=parentindexes(S)
     KO=parent(S)
 

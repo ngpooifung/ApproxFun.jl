@@ -80,7 +80,7 @@ zeroblock(X::BandedBlockBandedMatrix,K::Block,J::Block) = bzeros(eltype(X),X.row
 
 const BandedBlockBandedBlock{T,U,V} = SubArray{T,2,BandedBlockBandedMatrix{T,U,V},Tuple{Block,Block},false}
 const BandedBlockBandedSubBlock{T,U,V} = SubArray{T,2,BandedBlockBandedMatrix{T,U,V},Tuple{SubBlock{UnitRange{Int}},SubBlock{UnitRange{Int}}},false}
-const SubBandedBlockBandedRange{T,BBM<:BandedBlockBandedMatrix} = SubArray{T,2,BBM,Tuple{UnitRange{Block},UnitRange{Block}},false}
+const SubBandedBlockBandedRange{T,BBM<:BandedBlockBandedMatrix} = SubArray{T,2,BBM,Tuple{UnitBlockRange,UnitBlockRange},false}
 const BLASBandedMatrix2{T,A,I} = Union{BandedBlockBandedBlock{T,A,I},BandedMatrices.BLASBandedMatrix{T}}
 
 isbandedblockbanded(::SubBandedBlockBandedRange) = true
